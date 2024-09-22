@@ -1,5 +1,5 @@
 # docker network create mynetwork
-# PASSWORD="mypassword" SUDO_PASSWORD="thisisnotstrongpass" PROXY_DOMAIN="domain.example.com" docker compose -f docker-compose-code-server.yml up -d
+# PASSWORD="mypassword" SUDO_PASSWORD="thisisnotstrongpass" PROXY_DOMAIN="code.example.com" docker compose -f docker-compose-code-server.yml up -d
 ---
 services:
   code-server:
