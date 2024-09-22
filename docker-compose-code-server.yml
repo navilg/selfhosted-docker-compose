@@ -1,0 +1,37 @@
+# docker network create mynetwork
+# PASSWORD="mypassword" SUDO_PASSWORD="thisisnotstrongpass" PROXY_DOMAIN="domain.example.com" docker compose -f docker-compose-code-server.yml up -d
+---
+services:
+  code-server:
+    image: linuxserver/code-server:4.90.3
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD=${PASSWORD:?"PASSOWRD is must"}
+    # - HASHED_PASSWORD= #optional
+      - SUDO_PASSWORD=${SUDO_PASSWORD:?"SUDO_PASSWORD is must"}
+    # - SUDO_PASSWORD_HASH= #optional
+      - PROXY_DOMAIN=${PROXY_DOMAIN:-"localhost"}
+      - DEFAULT_WORKSPACE=/config/workspace #optional
+    volumes:
+      - code-server-config:/config
+    # ports:
+    #   - 8443:8443
+    restart: unless-stopped
+    networks:
+      - mynetwork
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.code-server.entrypoints=websecure
+      - traefik.http.routers.code-server.rule=Host(`${PROXY_DOMAIN}`)
+      - traefik.http.routers.code-server.tls=true
+      - traefik.http.routers.code-server.tls.certresolver=le
+      - traefik.http.routers.code-server.tls.domains[0].main=${PROXY_DOMAIN}
+      - traefik.http.services.code-server.loadbalancer.server.port=8443
+volumes:
+  code-server-config:
+networks:
+  mynetwork:
+    external: true

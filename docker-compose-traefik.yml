@@ -1,0 +1,63 @@
+# docker network create mynetwork
+# LE_EMAIL="myemail@example.com" DOMAIN="traefikdashboard.example.com" HASHED_ADMIN_USER_PASS="hashedpassword" docker compose -f docker-compose-traefik.yml up -d
+
+# Generate HASHED_ADMIN_USER_PASS using below command
+# htpasswd -B -C 10 -c .htpasswd user1
+# cat .htpasswd | sed -e s/\\$/\\$\\$/g
+
+services:
+  traefik:
+    image: traefik:v2.11.10
+    container_name: traefik
+    command:
+      # - --log.level=DEBUG
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --accesslog=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=mynetwork
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.permanent=true
+      - --certificatesresolvers.le.acme.email=${LE_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpChallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.httpChallenge=true
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - "--certificatesresolvers.le.acme.preferredChain=ISRG Root X1"
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.traefik.entryPoints=websecure
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=le
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.services.api.loadbalancer.server.port=8080
+      - traefik.http.routers.traefik.tls.domains[0].main=${DOMAIN}
+      - traefik.http.routers.traefik.middlewares=frontend
+      - traefik.http.middlewares.frontend.basicAuth.users=${HASHED_ADMIN_USER_PASS}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-le:/letsencrypt
+      # - traefik-config:/etc/traefik
+      # - traefik-local-plugins:/plugins-local/
+    networks:
+      - mynetwork
+
+
+volumes:
+  traefik-le:
+  # traefik-config:
+  # traefik-local-plugins:
+
+networks:
+  mynetwork:
+    external: true
+
